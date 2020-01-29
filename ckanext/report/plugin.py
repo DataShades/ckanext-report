@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import ckan.plugins as p
 from ckanext.report.interfaces import IReport
 
@@ -7,24 +8,17 @@ import ckanext.report.logic.auth.get as auth_get
 import ckanext.report.logic.auth.update as auth_update
 
 class ReportPlugin(p.SingletonPlugin):
-    p.implements(p.IRoutes, inherit=True)
+    p.implements(p.IBlueprint)
     p.implements(p.IConfigurer)
     p.implements(p.ITemplateHelpers)
-    p.implements(p.IActions, inherit=True)
-    p.implements(p.IAuthFunctions, inherit=True)
+    p.implements(p.IActions)
+    p.implements(p.IAuthFunctions)
 
-    # IRoutes
+    # IBlueprint
 
-    def before_map(self, map):
-        report_ctlr = 'ckanext.report.controllers:ReportController'
-        map.connect('reports', '/report', controller=report_ctlr,
-                    action='index')
-        map.redirect('/reports', '/report')
-        map.connect('report', '/report/:report_name', controller=report_ctlr,
-                    action='view')
-        map.connect('report-org', '/report/:report_name/:organization',
-                    controller=report_ctlr, action='view')
-        return map
+    def get_blueprint(self):
+        import ckanext.report.views as views
+        return views.get_blueprints()
 
     # IConfigurer
 
@@ -70,6 +64,5 @@ class TaglessReportPlugin(p.SingletonPlugin):
     # IReport
 
     def register_reports(self):
-        import reports
+        from . import reports
         return [reports.tagless_report_info]
-

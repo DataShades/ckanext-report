@@ -5,7 +5,7 @@ import ckan.plugins.toolkit as t
 import ckanext.report.helpers as helpers
 from ckanext.report.report_registry import Report
 from ckan.lib.render import TemplateNotFound
-from ckan.common import OrderedDict
+from collections import OrderedDict
 
 
 log = __import__('logging').getLogger(__name__)
@@ -173,7 +173,7 @@ def make_csv_from_dicts(rows):
             items.append(item)
         try:
             csvwriter.writerow(items)
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s: %s, %s" % (e, row, items))
     csvout.seek(0)
     return csvout.read()

@@ -85,7 +85,7 @@ ckanext-report.notes.dataset = ' '.join(('Unpublished' if asbool(pkg.extras.get(
 
 A report has three key elements:
 
-1. Report Code - a python function that produces the report. 
+1. Report Code - a python function that produces the report.
 2. Template - HTML for displaying the report data.
 3. Registration - containing the configuration of the report.
 
@@ -109,7 +109,7 @@ The returned data should be a dict like this:
     'average_tags_per_package': 3.5,
 }
 ```
-  
+
 There should be a `table` with the main body of the data, and any other totals or incidental pieces of data.
 
 Note: the table is required because of the CSV download facility, and CSV demands a table. (The CSV download only includes the table, ignoring any other values in the data.) Although the data has to essentially be stored as a table, you do have the option to display it differently in the web page by using a clever template.
@@ -215,7 +215,7 @@ class TaglessReportPlugin(p.SingletonPlugin):
 The last line refers to `tag_report_info` which is a dictionary with properties of the report. This is stored in `reports.py` together with the report code (see above). The info dict looks like this:
 
 ```python
-from ckan.common import OrderedDict
+from collections import OrderedDict
 tagless_report_info = {
     'name': 'tagless-datasets',
     'description': 'Datasets which have no tags.',
