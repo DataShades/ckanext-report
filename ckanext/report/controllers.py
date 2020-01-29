@@ -165,7 +165,7 @@ def make_csv_from_dicts(rows):
             if isinstance(item, datetime.datetime):
                 item = item.strftime('%Y-%m-%d %H:%M')
             elif isinstance(item, (int, long, float, list, tuple)):
-                item = unicode(item)
+                item = str(item)
             elif item is None:
                 item = ''
             else:

@@ -38,7 +38,7 @@ def filter_by_organizations(query, organization, include_sub_organizations):
     from ckan import model
     if not organization:
         return query
-    if isinstance(organization, basestring):
+    if isinstance(organization, str):
         organization = model.Group.get(organization)
         assert organization
     if include_sub_organizations:

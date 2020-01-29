@@ -56,7 +56,7 @@ class Report(object):
                                         self.option_defaults[key])
             else:
                 value = option_dict[key]
-            if isinstance(value, basestring):
+            if isinstance(value, str):
                 try:
                     value = str(value)
                 except UnicodeEncodeError:

@@ -1,3 +1,4 @@
+import datetime
 import ckan.plugins.toolkit as tk
 from ckan.lib.helpers import json
 from ckan.lib.render import TemplateNotFound
@@ -24,6 +25,10 @@ def index():
         return tk.abort(401)
 
     return tk.render("report/index.html", extra_vars={"reports": reports})
+
+
+def view_org(report_name, organization, refresh=False):
+    return view(report_name, organization, refresh)
 
 
 def view(report_name, organization=None, refresh=False):
@@ -119,7 +124,6 @@ def view(report_name, organization=None, refresh=False):
         tk.abort(404)
     except tk.NotAuthorized:
         tk.abort(401)
-
     response = make_response()
     if format and format != "html":
         ensure_data_is_dicts(data)
@@ -136,11 +140,11 @@ def view(report_name, organization=None, refresh=False):
             response.headers["Content-Disposition"] = str(
                 "attachment; filename=%s" % (filename)
             )
-            response.content = make_csv_from_dicts(data["table"])
+            response.data = make_csv_from_dicts(data["table"])
         elif format == "json":
             response.headers["Content-Type"] = "application/json"
             data["generated_at"] = report_date
-            response.content = json.dumps(data)
+            response.data = json.dumps(data)
         else:
             tk.abort(400, "Format not known - try html, json or csv")
         return response
@@ -174,5 +178,80 @@ report.add_url_rule("/reports", view_func=redirect_reports)
 
 report.add_url_rule("/report/<report_name>", view_func=view, methods=("POST", "GET"))
 report.add_url_rule(
-    "/report/<report_name>/<organization>", view_func=view, methods=("POST", "GET")
+    "/report/<report_name>/<organization>", view_func=view_org, methods=("POST", "GET")
 )
+
+
+
+
+def make_csv_from_dicts(rows):
+    import csv
+    import io
+
+    csvout = io.StringIO()
+    csvwriter = csv.writer(
+        csvout,
+        dialect='excel',
+        quoting=csv.QUOTE_NONNUMERIC
+    )
+    # extract the headers by looking at all the rows and
+    # get a full list of the keys, retaining their ordering
+    headers_ordered = []
+    headers_set = set()
+    for row in rows:
+        new_headers = set(row.keys()) - headers_set
+        headers_set |= new_headers
+        for header in row.keys():
+            if header in new_headers:
+                headers_ordered.append(header)
+    csvwriter.writerow(headers_ordered)
+    for row in rows:
+        items = []
+        for header in headers_ordered:
+            item = row.get(header, 'no record')
+            if isinstance(item, datetime.datetime):
+                item = item.strftime('%Y-%m-%d %H:%M')
+            elif isinstance(item, (int, float, list, tuple)):
+                item = str(item)
+            elif item is None:
+                item = ''
+            else:
+                item = item.encode('utf8')
+            items.append(item)
+        try:
+            csvwriter.writerow(items)
+        except Exception as e:
+            raise Exception("%s: %s, %s" % (e, row, items))
+    csvout.seek(0)
+    return csvout.read()
+
+
+def ensure_data_is_dicts(data):
+    '''Ensure that the data is a list of dicts, rather than a list of tuples
+    with column names, as sometimes is the case. Changes it in place'''
+    if data['table'] and isinstance(data['table'][0], (list, tuple)):
+        new_data = []
+        columns = data['columns']
+        for row in data['table']:
+            new_data.append(OrderedDict(zip(columns, row)))
+        data['table'] = new_data
+        del data['columns']
+
+
+def anonymise_user_names(data, organization=None):
+    '''Ensure any columns with names in are anonymised, unless the current user
+    has privileges.
+
+    NB this is only enabled for data.gov.uk - it is custom functionality.
+    '''
+    try:
+        import ckanext.dgu.lib.helpers as dguhelpers
+    except ImportError:
+        # If this is not DGU then cannot do the anonymization
+        return
+    column_names = data['table'][0].keys() if data['table'] else []
+    for col in column_names:
+        if col.lower() in ('user', 'username', 'user name', 'author'):
+            for row in data['table']:
+                row[col] = dguhelpers.user_link_info(
+                    row[col], organization=organization)[0]
